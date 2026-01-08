@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -33,5 +37,76 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 
 	// TODO: implement the upload here
 
-	respondWithJSON(w, http.StatusOK, struct{}{})
+	//Bit shifting is a way to multiply by powers of 2. 
+	//10 << 20 is the same as 10 * 1024 * 1024, which is 10MB.
+	const maxMemory = 10 << 20
+	r.ParseMultipartForm(maxMemory)
+
+	multiPartfile, header, err := r.FormFile("thumbnail")
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Unable to parse form file", err)
+		return
+	}
+	defer multiPartfile.Close()
+
+	contentTypes := header.Header.Get("Content-Type")
+
+	//img_data, err := io.ReadAll(multiPartfile)
+	//if err != nil {
+	//	respondWithError(w, http.StatusBadRequest, "Unable to read form file", err)
+	//	return
+	//}
+
+	viedeo_db ,err := cfg.db.GetVideo(videoID)
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "No video id here", err)
+		return
+	}
+
+	if viedeo_db.UserID != userID {
+    respondWithError(w, http.StatusUnauthorized, "Not video owner", nil)
+    return
+	}
+
+	//vod_thumbnail := thumbnail{
+	//	data: img_data,
+	//	mediaType: contentTypes,
+	//}
+
+
+	//videoThumbnails[viedeo_db.ID] = vod_thumbnail
+
+	//img_data_str := base64.StdEncoding.EncodeToString(img_data)
+	//data_url := "data:"+contentTypes+";base64,"+img_data_str
+
+	file_extendsion := strings.Split(contentTypes, "/")
+	if len(file_extendsion) < 2 {
+		respondWithError(w, http.StatusInternalServerError, "header contentType err", err)
+		return
+	}
+
+	filename := videoIDString + "." + file_extendsion[1]
+	img_file_path := filepath.Join(cfg.assetsRoot,filename)
+	new_file,err := os.Create(img_file_path)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "can't create img file", err)
+		return
+	}
+	defer new_file.Close()
+
+	io.Copy(new_file,multiPartfile)
+	
+
+	thumbnail_url := "http://localhost:"+cfg.port+"/"+img_file_path
+
+	viedeo_db.ThumbnailURL = &thumbnail_url
+
+	err = cfg.db.UpdateVideo(viedeo_db)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "can't update vod data", err)
+		return
+	}
+
+	
+	respondWithJSON(w, http.StatusOK, viedeo_db)
 }
