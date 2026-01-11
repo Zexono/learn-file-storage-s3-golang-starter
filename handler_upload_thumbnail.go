@@ -1,12 +1,13 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/auth"
 	"github.com/google/uuid"
@@ -79,7 +80,31 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	//img_data_str := base64.StdEncoding.EncodeToString(img_data)
 	//data_url := "data:"+contentTypes+";base64,"+img_data_str
 
-	file_extendsion := strings.Split(contentTypes, "/")
+	media_type ,_,err := mime.ParseMediaType(contentTypes)
+	if  media_type != "image/jpeg" && media_type != "image/png" && media_type != "image/webp"{
+		respondWithError(w, http.StatusInternalServerError, "header contentType not img", err)
+		return
+	}
+
+	key := make([]byte, 32)
+	rand.Read(key)
+	filename := base64.RawURLEncoding.EncodeToString(key)
+
+	assetPath := getAssetPath(filename, contentTypes)
+	assetDiskPath := cfg.getAssetDiskPath(assetPath)
+
+	dst, err := os.Create(assetDiskPath)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to create file on server", err)
+		return
+	}
+	defer dst.Close()
+	if _, err = io.Copy(dst, multiPartfile); err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Error saving file", err)
+		return
+	}
+
+	/*file_extendsion := strings.Split(contentTypes, "/")
 	if len(file_extendsion) < 2 {
 		respondWithError(w, http.StatusInternalServerError, "header contentType err", err)
 		return
@@ -97,9 +122,12 @@ func (cfg *apiConfig) handlerUploadThumbnail(w http.ResponseWriter, r *http.Requ
 	io.Copy(new_file,multiPartfile)
 	
 
-	thumbnail_url := "http://localhost:"+cfg.port+"/"+img_file_path
+	thumbnail_url := "http://localhost:"+cfg.port+"/"+img_file_path*/
+	url := cfg.getAssetURL(assetPath)
+	
+	
 
-	viedeo_db.ThumbnailURL = &thumbnail_url
+	viedeo_db.ThumbnailURL = &url
 
 	err = cfg.db.UpdateVideo(viedeo_db)
 	if err != nil {
