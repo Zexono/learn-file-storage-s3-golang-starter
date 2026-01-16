@@ -95,7 +95,13 @@ func (cfg *apiConfig) handlerVideoGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, http.StatusOK, video)
+	signed_viedeo_db , err := cfg.dbVideoToSignedVideo(video)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "can't update signed vod data", err)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, signed_viedeo_db)
 }
 
 func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Request) {
@@ -115,6 +121,16 @@ func (cfg *apiConfig) handlerVideosRetrieve(w http.ResponseWriter, r *http.Reque
 		respondWithError(w, http.StatusInternalServerError, "Couldn't retrieve videos", err)
 		return
 	}
+	
+	var signed_videos []database.Video
+	for _, video := range videos {
+		signed_viedeo_db , err := cfg.dbVideoToSignedVideo(video)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, "can't update signed vod data", err)
+			return
+		}
+		signed_videos = append(signed_videos, signed_viedeo_db)
+	}
 
-	respondWithJSON(w, http.StatusOK, videos)
+	respondWithJSON(w, http.StatusOK, signed_videos)
 }
