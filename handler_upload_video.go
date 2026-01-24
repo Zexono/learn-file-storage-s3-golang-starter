@@ -128,7 +128,9 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		ContentType: &media_type,
 	})
 
-	url := fmt.Sprintf("%s,%s", cfg.s3Bucket, assetPath)
+	//this
+	//url := fmt.Sprintf("%s,%s", cfg.s3Bucket, assetPath)
+	url := fmt.Sprintf("https://%s/%s",cfg.s3CfDistribution,assetPath)
 	viedeo_db.VideoURL = &url
 
 	err = cfg.db.UpdateVideo(viedeo_db)
@@ -137,14 +139,14 @@ func (cfg *apiConfig) handlerUploadVideo(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	signed_viedeo_db , err := cfg.dbVideoToSignedVideo(viedeo_db)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "can't update signed vod data", err)
-		return
-	}
+	// signed_viedeo_db , err := cfg.dbVideoToSignedVideo(viedeo_db)
+	// if err != nil {
+	// 	respondWithError(w, http.StatusInternalServerError, "can't update signed vod data", err)
+	// 	return
+	// }
 
 	
-	respondWithJSON(w, http.StatusOK, signed_viedeo_db)
+	respondWithJSON(w, http.StatusOK, viedeo_db)
 
 
 }

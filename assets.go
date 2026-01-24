@@ -2,17 +2,12 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/bootdotdev/learn-file-storage-s3-golang-starter/internal/database"
 )
 
 func (cfg apiConfig) ensureAssetsDir() error {
@@ -92,39 +87,39 @@ func processVideoForFastStart(filePath string) (string, error){
 	return new_filepath,nil
 }
 
-func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error){
+// func generatePresignedURL(s3Client *s3.Client, bucket, key string, expireTime time.Duration) (string, error){
 	
-	presignClient := s3.NewPresignClient(s3Client)
-	object , err := presignClient.PresignGetObject(context.Background(),&s3.GetObjectInput{
-		Bucket: &bucket,
-		Key: &key,
-	},s3.WithPresignExpires(expireTime))
+// 	presignClient := s3.NewPresignClient(s3Client)
+// 	object , err := presignClient.PresignGetObject(context.Background(),&s3.GetObjectInput{
+// 		Bucket: &bucket,
+// 		Key: &key,
+// 	},s3.WithPresignExpires(expireTime))
 
-	if err != nil {
-		return "",err
-	}
-	return object.URL,nil
+// 	if err != nil {
+// 		return "",err
+// 	}
+// 	return object.URL,nil
 
-}
+// }
 
-func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error){
+// func (cfg *apiConfig) dbVideoToSignedVideo(video database.Video) (database.Video, error){
 	
-	if video.VideoURL == nil {
-    	return video, nil
-	}
+// 	if video.VideoURL == nil {
+//     	return video, nil
+// 	}
 
-	parts := strings.Split(*video.VideoURL, ",")
-	if len(parts) < 2 {
-    	return video, nil
-	}
-	bucket := parts[0]
-	key := parts[1]
+// 	parts := strings.Split(*video.VideoURL, ",")
+// 	if len(parts) < 2 {
+//     	return video, nil
+// 	}
+// 	bucket := parts[0]
+// 	key := parts[1]
 	
-	url,err := generatePresignedURL(cfg.s3Client,bucket,key,3600)
-	if err != nil {
-		return video,err
-	}
-	video.VideoURL = &url
+// 	url,err := generatePresignedURL(cfg.s3Client,bucket,key,3600)
+// 	if err != nil {
+// 		return video,err
+// 	}
+// 	video.VideoURL = &url
 	
-	return video,nil
-}
+// 	return video,nil
+// }
